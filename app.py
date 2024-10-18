@@ -14,7 +14,6 @@ def select_points(event, x, y, flags, param):
         cv2.circle(image_display, (x, y), 5, (255, 0, 0), -1)
         cv2.imshow("Select Points", image_display)
     elif event == cv2.EVENT_RBUTTONDOWN and selected_points:
-        # Undo last point
         selected_points.pop()
         image_display = image.copy()
         redraw_points()
@@ -45,10 +44,17 @@ def undistort_and_crop(image_path, points):
     return result
 
 def scale_image_for_display(image, padding=50):
-    screen_height, screen_width = 1080, 1920  # assuming a common screen resolution
+    # Get screen resolution
+    root = Tk()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    root.quit()
+    
     scale_factor = 1.0
 
     image_height, image_width = image.shape[:2]
+    
+    # Add padding to size limits
     max_width = screen_width - padding
     max_height = screen_height - padding
 
@@ -56,7 +62,11 @@ def scale_image_for_display(image, padding=50):
         scale_factor = min(max_width / image_width, max_height / image_height)
         image = cv2.resize(image, (int(image_width * scale_factor), int(image_height * scale_factor)))
 
-    return image, scale_factor
+    # Create a blank canvas with padding
+    canvas = np.ones((int(image.shape[0] + padding), int(image.shape[1] + padding), 3), dtype=np.uint8) * 255
+    canvas[padding//2:int(image.shape[0] + padding//2), padding//2:int(image.shape[1] + padding//2)] = image
+    
+    return canvas, scale_factor
 
 def process_images_in_folder(folder_path):
     global selected_points, image, image_display
@@ -83,7 +93,6 @@ def process_images_in_folder(folder_path):
                         selected_points.pop()
                         image_display = image.copy()
                         redraw_points()
-                        cv2.imshow("Select Points", image_display)
 
                 if len(selected_points) == 4:
                     break
@@ -91,7 +100,6 @@ def process_images_in_folder(folder_path):
             cv2.destroyAllWindows()
 
             if len(selected_points) == 4:
-                # Rescale points if image was scaled
                 original_points = [(int(x / scale_factor), int(y / scale_factor)) for x, y in selected_points]
                 cropped_image = undistort_and_crop(image_path, original_points)
                 save_path = os.path.join(output_folder, filename)
