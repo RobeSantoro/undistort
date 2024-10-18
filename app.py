@@ -6,24 +6,26 @@ from tkinter import Tk, filedialog
 selected_points = []
 
 def select_points(event, x, y, flags, param):
-    global selected_points, image_display
+    global selected_points, image_display, original_image
     if event == cv2.EVENT_LBUTTONDOWN and len(selected_points) < 4:
         selected_points.append((x, y))
-        if len(selected_points) > 1:
-            cv2.line(image_display, selected_points[-2], selected_points[-1], (255, 255, 255), 2)
-        cv2.circle(image_display, (x, y), 5, (255, 0, 0), -1)
-        cv2.imshow("Select Points", image_display)
+        draw_points_and_lines()
     elif event == cv2.EVENT_RBUTTONDOWN and selected_points:
         selected_points.pop()
-        image_display = image.copy()
-        redraw_points()
+        redraw_points()  # Ensures points are redrawn correctly on the padded image
 
-def redraw_points():
+def draw_points_and_lines():
+    global image_display
+    # Redraw the unaltered image with padding
+    image_display = original_image.copy()  # Use the canvas with padding
     for i, point in enumerate(selected_points):
         cv2.circle(image_display, point, 5, (255, 0, 0), -1)
         if i > 0:
-            cv2.line(image_display, selected_points[i-1], point, (255, 255, 255), 2)
+            cv2.line(image_display, selected_points[i - 1], point, (255, 255, 255), 2)
     cv2.imshow("Select Points", image_display)
+
+def redraw_points():
+    draw_points_and_lines()
 
 def calculate_width_height(points):
     width_top = np.sqrt((points[1][0] - points[0][0]) ** 2 + (points[1][1] - points[0][1]) ** 2)
@@ -66,7 +68,7 @@ def scale_image_for_display(image, padding=50):
     return canvas, scale_factor, padding
 
 def process_images_in_folder(folder_path):
-    global selected_points, image, image_display
+    global selected_points, image_display, original_image
     output_folder = os.path.join(folder_path, "undistorted")
     os.makedirs(output_folder, exist_ok=True)
 
@@ -74,11 +76,11 @@ def process_images_in_folder(folder_path):
         if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             image_path = os.path.join(folder_path, filename)
             image = cv2.imread(image_path)
-            image_display, scale_factor, padding = scale_image_for_display(image.copy())
+            original_image, scale_factor, padding = scale_image_for_display(image.copy())
 
             selected_points = []
 
-            cv2.imshow("Select Points", image_display)
+            cv2.imshow("Select Points", original_image)
             cv2.setMouseCallback("Select Points", select_points)
 
             while len(selected_points) < 4:
@@ -88,11 +90,7 @@ def process_images_in_folder(folder_path):
                 elif key == ord('u'):  # 'u' to undo the last point
                     if selected_points:
                         selected_points.pop()
-                        image_display = image.copy()
-                        redraw_points()
-
-                if len(selected_points) == 4:
-                    break
+                        draw_points_and_lines()
 
             cv2.destroyAllWindows()
 
