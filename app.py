@@ -1,6 +1,14 @@
 import cv2
 import numpy as np
 
+selected_points = []  # To store the selected points
+
+def select_points(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        selected_points.append((x, y))
+        cv2.circle(image, (x, y), 5, (255, 0, 0), -1)
+        cv2.imshow("Select Points", image)
+
 def undistort_and_crop(image_path, points):
     # Load image
     image = cv2.imread(image_path)
@@ -20,11 +28,22 @@ def undistort_and_crop(image_path, points):
     
     return result
 
-# Example usage:
+# Load the original image
 image_path = "W:\\ATTRAVERSO\\undistort\\photo_png\\IMG_3963.png"
-# User-defined corner points (top-left, top-right, bottom-right, bottom-left)
-points = [(100, 50), (400, 50), (400, 400), (100, 400)]
-cropped_image = undistort_and_crop(image_path, points)
+image = cv2.imread(image_path)
+
+# Create a window and set a mouse callback function
+cv2.imshow("Select Points", image)
+cv2.setMouseCallback("Select Points", select_points)
+
+# Wait until 4 points are selected
+while len(selected_points) < 4:
+    cv2.waitKey(1)
+
+cv2.destroyAllWindows()
+
+# Use the selected points to undistort and crop the image
+cropped_image = undistort_and_crop(image_path, selected_points)
 
 # Save or display the result
 cv2.imwrite('undistorted_painting.jpg', cropped_image)
