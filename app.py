@@ -45,9 +45,9 @@ def undistort_and_crop(image_path, points):
 
 def scale_image_for_display(image, padding=50):
     root = Tk()
+    root.withdraw()
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    root.quit()
     
     scale_factor = 1.0
 
@@ -63,7 +63,7 @@ def scale_image_for_display(image, padding=50):
     canvas = np.ones((int(image.shape[0] + padding), int(image.shape[1] + padding), 3), dtype=np.uint8) * 255
     canvas[padding//2:int(image.shape[0] + padding//2), padding//2:int(image.shape[1] + padding//2)] = image
     
-    return canvas, scale_factor
+    return canvas, scale_factor, padding
 
 def process_images_in_folder(folder_path):
     global selected_points, image, image_display
@@ -74,7 +74,7 @@ def process_images_in_folder(folder_path):
         if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             image_path = os.path.join(folder_path, filename)
             image = cv2.imread(image_path)
-            image_display, scale_factor = scale_image_for_display(image.copy())
+            image_display, scale_factor, padding = scale_image_for_display(image.copy())
 
             selected_points = []
 
@@ -97,7 +97,11 @@ def process_images_in_folder(folder_path):
             cv2.destroyAllWindows()
 
             if len(selected_points) == 4:
-                original_points = [(int(x / scale_factor), int(y / scale_factor)) for x, y in selected_points]
+                # Adjust points to account for padding and scaling
+                original_points = [
+                    (int((x - padding//2) / scale_factor), int((y - padding//2) / scale_factor))
+                    for x, y in selected_points
+                ]
                 cropped_image = undistort_and_crop(image_path, original_points)
                 save_path = os.path.join(output_folder, filename)
                 cv2.imwrite(save_path, cropped_image)
