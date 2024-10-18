@@ -9,15 +9,30 @@ def select_points(event, x, y, flags, param):
         cv2.circle(image, (x, y), 5, (255, 0, 0), -1)
         cv2.imshow("Select Points", image)
 
+def calculate_width_height(points):
+    # Calculate the width as the average length of the top and bottom edges
+    width_top = np.sqrt((points[1][0] - points[0][0]) ** 2 + (points[1][1] - points[0][1]) ** 2)
+    width_bottom = np.sqrt((points[2][0] - points[3][0]) ** 2 + (points[2][1] - points[3][1]) ** 2)
+    width = max(int(width_top), int(width_bottom))
+
+    # Calculate the height as the average length of the left and right edges
+    height_left = np.sqrt((points[3][0] - points[0][0]) ** 2 + (points[3][1] - points[0][1]) ** 2)
+    height_right = np.sqrt((points[2][0] - points[1][0]) ** 2 + (points[2][1] - points[1][1]) ** 2)
+    height = max(int(height_left), int(height_right))
+
+    return width, height
+
 def undistort_and_crop(image_path, points):
     # Load image
     image = cv2.imread(image_path)
     
-    # Define the points for the perspective transformation
-    pts1 = np.float32(points)  # Points marked by user (top-left, top-right, bottom-right, bottom-left)
-    
+    # Convert points to float32
+    pts1 = np.float32(points)
+
+    # Calculate new width and height
+    width, height = calculate_width_height(points)
+
     # Define the destination points for the undistorted image
-    width, height = 500, 700  # Adjust as needed
     pts2 = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
     
     # Get the perspective transform matrix
