@@ -7,7 +7,7 @@ selected_points = []
 
 def select_points(event, x, y, flags, param):
     global selected_points, image_display
-    if event == cv2.EVENT_LBUTTONDOWN:
+    if event == cv2.EVENT_LBUTTONDOWN and len(selected_points) < 4:
         selected_points.append((x, y))
         if len(selected_points) > 1:
             cv2.line(image_display, selected_points[-2], selected_points[-1], (255, 255, 255), 2)
@@ -44,7 +44,6 @@ def undistort_and_crop(image_path, points):
     return result
 
 def scale_image_for_display(image, padding=50):
-    # Get screen resolution
     root = Tk()
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
@@ -54,7 +53,6 @@ def scale_image_for_display(image, padding=50):
 
     image_height, image_width = image.shape[:2]
     
-    # Add padding to size limits
     max_width = screen_width - padding
     max_height = screen_height - padding
 
@@ -62,7 +60,6 @@ def scale_image_for_display(image, padding=50):
         scale_factor = min(max_width / image_width, max_height / image_height)
         image = cv2.resize(image, (int(image_width * scale_factor), int(image_height * scale_factor)))
 
-    # Create a blank canvas with padding
     canvas = np.ones((int(image.shape[0] + padding), int(image.shape[1] + padding), 3), dtype=np.uint8) * 255
     canvas[padding//2:int(image.shape[0] + padding//2), padding//2:int(image.shape[1] + padding//2)] = image
     
@@ -84,7 +81,7 @@ def process_images_in_folder(folder_path):
             cv2.imshow("Select Points", image_display)
             cv2.setMouseCallback("Select Points", select_points)
 
-            while True:
+            while len(selected_points) < 4:
                 key = cv2.waitKey(0)
                 if key == 27:  # ESC to skip the image
                     break
