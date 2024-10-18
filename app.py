@@ -6,8 +6,9 @@ from tkinter import Tk, filedialog
 def draw_instructions(image, text):
     text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
     text_x = (image.shape[1] - text_size[0]) // 2  # Center the text
-    y = image.shape[0] - 10
-    cv2.putText(image, text, (text_x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+    y = image.shape[0] - 6
+    # Draw the white text on top of the black rectangle
+    cv2.putText(image, text, (text_x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
 selected_points = []
 
@@ -69,7 +70,8 @@ def scale_image_for_display(image, padding=50):
         scale_factor = min(max_width / image_width, max_height / image_height)
         image = cv2.resize(image, (int(image_width * scale_factor), int(image_height * scale_factor)))
 
-    canvas = np.ones((int(image.shape[0] + padding), int(image.shape[1] + padding), 3), dtype=np.uint8) * 255
+    # Create a black canvas
+    canvas = np.zeros((int(image.shape[0] + padding), int(image.shape[1] + padding), 3), dtype=np.uint8)
     canvas[padding//2:int(image.shape[0] + padding//2), padding//2:int(image.shape[1] + padding//2)] = image
     
     return canvas, scale_factor, padding
@@ -92,6 +94,12 @@ def process_images_in_folder(folder_path):
 
             while True:
                 key = cv2.waitKey(0)
+                
+                # Check if the window has been closed (ALT+F4)
+                if cv2.getWindowProperty("Select Points", cv2.WND_PROP_VISIBLE) < 1:
+                    cv2.destroyAllWindows()
+                    return
+                
                 if key == 27:  # ESC to skip the image
                     break
                 elif key == ord('u'):  # 'u' to undo the last point
