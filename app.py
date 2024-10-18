@@ -3,6 +3,12 @@ import numpy as np
 import os
 from tkinter import Tk, filedialog
 
+def draw_instructions(image, text):
+    text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+    text_x = (image.shape[1] - text_size[0]) // 2  # Center the text
+    y = image.shape[0] - 10
+    cv2.putText(image, text, (text_x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+
 selected_points = []
 
 def select_points(event, x, y, flags, param):
@@ -12,20 +18,21 @@ def select_points(event, x, y, flags, param):
         draw_points_and_lines()
     elif event == cv2.EVENT_RBUTTONDOWN and selected_points:
         selected_points.pop()
-        redraw_points()  # Ensures points are redrawn correctly on the padded image
+        draw_points_and_lines()
 
 def draw_points_and_lines():
     global image_display
-    # Redraw the unaltered image with padding
     image_display = original_image.copy()  # Use the canvas with padding
     for i, point in enumerate(selected_points):
         cv2.circle(image_display, point, 5, (255, 0, 0), -1)
         if i > 0:
             cv2.line(image_display, selected_points[i - 1], point, (255, 255, 255), 2)
+    if len(selected_points) == 4:
+        instructions = "Press Space to Crop"
+    else:
+        instructions = "Left-click: Set Corners | Right-click or 'u': Undo last point. | ESC: Skip image."
+    draw_instructions(image_display, instructions)
     cv2.imshow("Select Points", image_display)
-
-def redraw_points():
-    draw_points_and_lines()
 
 def calculate_width_height(points):
     width_top = np.sqrt((points[1][0] - points[0][0]) ** 2 + (points[1][1] - points[0][1]) ** 2)
@@ -79,11 +86,11 @@ def process_images_in_folder(folder_path):
             original_image, scale_factor, padding = scale_image_for_display(image.copy())
 
             selected_points = []
+            draw_points_and_lines()  # Initial draw instructions
 
-            cv2.imshow("Select Points", original_image)
             cv2.setMouseCallback("Select Points", select_points)
 
-            while len(selected_points) < 4:
+            while True:
                 key = cv2.waitKey(0)
                 if key == 27:  # ESC to skip the image
                     break
@@ -91,18 +98,17 @@ def process_images_in_folder(folder_path):
                     if selected_points:
                         selected_points.pop()
                         draw_points_and_lines()
+                elif len(selected_points) == 4 and key == 32:  # Space to proceed with cropping
+                    original_points = [
+                        (int((x - padding//2) / scale_factor), int((y - padding//2) / scale_factor))
+                        for x, y in selected_points
+                    ]
+                    cropped_image = undistort_and_crop(image_path, original_points)
+                    save_path = os.path.join(output_folder, filename)
+                    cv2.imwrite(save_path, cropped_image)
+                    break
 
             cv2.destroyAllWindows()
-
-            if len(selected_points) == 4:
-                # Adjust points to account for padding and scaling
-                original_points = [
-                    (int((x - padding//2) / scale_factor), int((y - padding//2) / scale_factor))
-                    for x, y in selected_points
-                ]
-                cropped_image = undistort_and_crop(image_path, original_points)
-                save_path = os.path.join(output_folder, filename)
-                cv2.imwrite(save_path, cropped_image)
 
 if __name__ == "__main__":
     root = Tk()
